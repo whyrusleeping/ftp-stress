@@ -20,6 +20,9 @@ func checkError(err error) bool {
 	if strings.HasPrefix(err.Error(), "150") {
 		return false
 	}
+	if strings.HasPrefix(err.Error(), "250") {
+		return false
+	}
 	return true
 }
 
@@ -33,7 +36,7 @@ func StressReads(con *ftp.ServerConn, files []string, iters int) (int64, error) 
 			return nread, err
 		}
 		n, err := io.Copy(ioutil.Discard, r)
-		if err != nil {
+		if checkError(err) {
 			fmt.Println("err: ", err)
 			return nread, err
 		}
@@ -41,7 +44,7 @@ func StressReads(con *ftp.ServerConn, files []string, iters int) (int64, error) 
 		nread += n
 
 		err = r.Close()
-		if err != nil {
+		if checkError(err) {
 			fmt.Println("err: ", err)
 			return nread, err
 		}
