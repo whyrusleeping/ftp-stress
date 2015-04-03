@@ -9,15 +9,26 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"runtime"
+	"strings"
 	"time"
 )
+
+func checkError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if strings.HasPrefix(err.Error(), "150") {
+		return false
+	}
+	return true
+}
 
 func StressReads(con *ftp.ServerConn, files []string, iters int) (int64, error) {
 	var nread int64
 	for i := 0; i < iters; i++ {
 		fi := files[rand.Intn(len(files))]
 		r, err := con.Retr(fi)
-		if err != nil {
+		if checkError(err) {
 			fmt.Println("err: ", err)
 			return nread, err
 		}
