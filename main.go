@@ -18,12 +18,12 @@ func StressReads(con *ftp.ServerConn, files []string, iters int) (int64, error) 
 		fi := files[rand.Intn(len(files))]
 		r, err := con.Retr(fi)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("err: ", err)
 			return nread, err
 		}
 		n, err := io.Copy(ioutil.Discard, r)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("err: ", err)
 			return nread, err
 		}
 
@@ -31,7 +31,7 @@ func StressReads(con *ftp.ServerConn, files []string, iters int) (int64, error) 
 
 		err = r.Close()
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("err: ", err)
 			return nread, err
 		}
 	}
@@ -86,6 +86,7 @@ func main() {
 	var sum int64
 	for i := 0; i < *threads; i++ {
 		sum += <-donech
+		fmt.Println("sum = ", sum)
 	}
 	end := time.Now().Sub(starttime)
 	fmt.Printf("Read a total of %s\n", humanize.Bytes(uint64(sum)))
