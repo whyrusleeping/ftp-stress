@@ -4,7 +4,8 @@ import (
 	"flag"
 	"fmt"
 	humanize "github.com/dustin/go-humanize"
-	"github.com/jlaffaye/ftp"
+	//"github.com/jlaffaye/ftp"
+	ftp "code.google.com/p/ftp4go"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -26,28 +27,30 @@ func checkError(err error) bool {
 	return true
 }
 
-func StressReads(con *ftp.ServerConn, files []string, iters int) (int64, error) {
+type countWriter struct {
+	written int64
+	w       io.Writer
+}
+
+func (c *countWriter) Write(b []byte) (int, error) {
+	n, err := c.w.Write(b)
+	c.written += int64(n)
+	return n, err
+}
+
+func StressReads(con *ftp.FTP, files []string, iters int) (int64, error) {
 	var nread int64
 	for i := 0; i < iters; i++ {
 		fi := files[rand.Intn(len(files))]
-		r, err := con.Retr(fi)
-		if checkError(err) {
-			fmt.Println("err: ", err)
-			return nread, err
-		}
-		n, err := io.Copy(ioutil.Discard, r)
-		if checkError(err) {
-			fmt.Println("err: ", err)
+		cw := &countWriter{w: ioutil.Discard}
+
+		err := con.GetBytes(ftp.RETR_FTP_CMD, cw, ftp.BLOCK_SIZE, fi)
+		if err != nil {
+			fmt.Println("1 err: ", err)
 			return nread, err
 		}
 
-		nread += n
-
-		err = r.Close()
-		if checkError(err) {
-			fmt.Println("err: ", err)
-			return nread, err
-		}
+		nread += cw.written
 	}
 	return nread, nil
 }
@@ -65,17 +68,22 @@ func main() {
 
 	flag.Parse()
 
-	con, err := ftp.Connect(fmt.Sprintf("%s:%d", *host, *port))
+	ftpC := ftp.NewFTP(0)
+	resp, err := ftpC.Connect(*host, *port, "")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	err = con.Login(*user, *pass)
+	fmt.Println("connect reponse: ", resp.Message)
+
+	resp, err = ftpC.Login(*user, *pass, "")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+
+	fmt.Println("login response: ", resp.Message)
 
 	if *rfile == "" {
 		fmt.Println("Please specify a file to read with `-file=X`")
@@ -89,7 +97,7 @@ func main() {
 	starttime := time.Now()
 	for i := 0; i < *threads; i++ {
 		go func() {
-			n, err := StressReads(con, files, *iters)
+			n, err := StressReads(ftpC, files, *iters)
 			if err != nil {
 				fmt.Println(err)
 			}
