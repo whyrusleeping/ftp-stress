@@ -68,23 +68,6 @@ func main() {
 
 	flag.Parse()
 
-	ftpC := ftp.NewFTP(0)
-	resp, err := ftpC.Connect(*host, *port, "")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	fmt.Println("connect reponse: ", resp.Message)
-
-	resp, err = ftpC.Login(*user, *pass, "")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	fmt.Println("login response: ", resp.Message)
-
 	if *rfile == "" {
 		fmt.Println("Please specify a file to read with `-file=X`")
 		return
@@ -97,6 +80,22 @@ func main() {
 	starttime := time.Now()
 	for i := 0; i < *threads; i++ {
 		go func() {
+			ftpC := ftp.NewFTP(0)
+			resp, err := ftpC.Connect(*host, *port, "")
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+
+			fmt.Println("connect reponse: ", resp.Message)
+
+			resp, err = ftpC.Login(*user, *pass, "")
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+
+			fmt.Println("login response: ", resp.Message)
 			n, err := StressReads(ftpC, files, *iters)
 			if err != nil {
 				fmt.Println(err)
